@@ -17,7 +17,6 @@ export const suggestContent = {
       - Do not highlight minor issues and nitpicks.
       - Use bullet points if you have multiple comments.
       - You don't have to explain what the code does
-      - please use Vietnames to give feedback.
       - If you think there is no need to optimize or modify, please reply with 666.
       Here are the changes that were committed this time`
 }
@@ -27,7 +26,6 @@ export const geminiSuggestContent = "Next, I will send you each step of the merg
     "                        - Do not highlight minor issues and nitpicks.\n" +
     "                        - Use bullet points if you have multiple comments.\n" +
     "                        - You don't have to explain what the code does\n" +
-    "                        - please use Vietnames to give feedback.\n" +
     "                        Here are the changes that were committed this time"
 
 export const openAiCompletionsConfig = {

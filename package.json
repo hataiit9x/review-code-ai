@@ -1,6 +1,6 @@
 {
   "name": "@hataiit9x/review-code-ai",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "index.js",
   "bin": {
     "review-code-ai": "bin/index.js"
