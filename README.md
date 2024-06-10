@@ -1,4 +1,4 @@
-# @hataiit9x/ai-code-reviewer
+# @hataiit9x/review-code-ai
 
 ## Summary
 

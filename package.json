@@ -1,9 +1,9 @@
 {
   "name": "@hataiit9x/review-code-ai",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "main": "index.js",
   "bin": {
-    "ai-code-reviewer": "bin/index.js"
+    "review-code-ai": "bin/index.js"
   },
   "scripts": {
     "start": "tsc --watch",
