@@ -77,5 +77,4 @@ Code Review:
 Welcome to contribute code, ask questions and suggestions! 👏
 
 ## License
-- This project is based on the MIT license. See the LICENSE file for details. 📜
 - This project is tested with BrowserStack
