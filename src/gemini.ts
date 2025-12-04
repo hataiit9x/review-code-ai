@@ -1,78 +1,48 @@
-import axios, {AxiosInstance} from 'axios';
-import {
-    geminiCompletionsConfig,
-    geminiSuggestContent,
-    geminiSystemContent,
-} from "./utils";
-const SAFETY_SETTINGS = [
-    {
-        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-        threshold: 'BLOCK_NONE',
-    },
-    {
-        category: 'HARM_CATEGORY_HATE_SPEECH',
-        threshold: 'BLOCK_NONE',
-    },
-    {
-        category: 'HARM_CATEGORY_HARASSMENT',
-        threshold: 'BLOCK_NONE',
-    },
-    {
-        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-        threshold: 'BLOCK_NONE',
-    },
-]
+import axios, { AxiosInstance } from 'axios';
+import { IAIClient } from './types';
+import { SYSTEM_PROMPT, REVIEW_INSTRUCTIONS, DEFAULT_GEMINI_MODEL, GEMINI_SAFETY_SETTINGS } from './prompts';
 
-export class Gemini {
+export class Gemini implements IAIClient {
     private apiClient: AxiosInstance;
+    private model: string;
+    private apiKey: string;
 
-    constructor(private apiUrl: string, private accessToken: string, private customModel?: string) {
+    constructor(apiUrl: string, accessToken: string, customModel?: string) {
+        this.apiKey = accessToken;
+        this.model = customModel || DEFAULT_GEMINI_MODEL;
+        
         this.apiClient = axios.create({
-            baseURL: apiUrl,
+            baseURL: `${apiUrl}/v1beta/models`,
+            headers: {
+                'Content-Type': 'application/json',
+            },
         });
     }
 
-    async reviewCodeChange(change: string): Promise<string> {
-        const apiKey = this.accessToken
-        const geminiAPIURL = this.apiUrl
-        const model = this.customModel || geminiCompletionsConfig.model
-        const url = `${geminiAPIURL}/v1beta/models/${model}:generateContent?key=${apiKey}` // change to generateContent
-        const headers = {
-            'Content-Type': 'application/json',
-            'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36 Edg/91.0.864.41',
-        }
-        const body = {
-            contents: [
-                {
-                    role: 'user',
-                    parts: [
-                        {
-                            text: change
-                        }
-                    ]
-                }
-            ],
-            systemInstruction: {
-                parts: [
+    async reviewCodeChange(diff: string): Promise<string> {
+        const response = await this.apiClient.post(
+            `/${this.model}:generateContent?key=${this.apiKey}`,
+            {
+                contents: [
                     {
-                        text: geminiSystemContent
-                    },
-                    {
-                        text: geminiSuggestContent
+                        role: 'user',
+                        parts: [{ text: diff }]
                     }
-                ]
-            },
-            safetySettings: SAFETY_SETTINGS,
-        };
-        const response = await this.apiClient.post(url, body, {
-            headers: headers,
-        });
+                ],
+                systemInstruction: {
+                    parts: [
+                        { text: SYSTEM_PROMPT },
+                        { text: REVIEW_INSTRUCTIONS }
+                    ]
+                },
+                safetySettings: GEMINI_SAFETY_SETTINGS,
+            }
+        );
 
         if (response.status < 200 || response.status >= 300) {
-            throw new Error('Request failed');
+            throw new Error(`Gemini API request failed with status ${response.status}`);
         }
-        const data = response.data;
-        return data.candidates[0].content.parts[0].text;
+
+        return response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
 }

@@ -1,48 +1,51 @@
-import axios, {AxiosInstance} from 'axios';
-import {openAiCompletionsConfig, suggestContent, systemContent} from "./utils";
+import axios, { AxiosInstance } from 'axios';
+import { IAIClient } from './types';
+import { OPENAI_CONFIG, openAiSystemMessage, openAiUserMessage } from './prompts';
 
-interface ICompletion {
-    messages?: { role: string, content: string }[];
-    temperature: number;
-    model: string;
-}
-
-export class OpenAI {
+export class OpenAI implements IAIClient {
     private apiClient: AxiosInstance;
     private accessTokens: string[];
     private accessTokenIndex = 0;
+    private model: string;
 
-    constructor(private apiUrl: string, private accessToken: string, private orgId?: string, private customModel?: string) {
+    constructor(apiUrl: string, accessToken: string, orgId?: string, customModel?: string) {
         this.accessTokens = accessToken.split(',');
-        const headers: { 'OpenAI-Organization'?: string } = {};
+        this.model = customModel || OPENAI_CONFIG.model;
+        
+        const headers: Record<string, string> = {};
         if (orgId) {
             headers['OpenAI-Organization'] = orgId;
         }
+        
         this.apiClient = axios.create({
             baseURL: apiUrl,
-            headers: {
-                ...headers,
-            },
+            headers,
         });
     }
 
-    async reviewCodeChange(change: string): Promise<string> {
-        const newIndex = this.accessTokenIndex = (this.accessTokenIndex >= this.accessTokens.length - 1 ? 0 : this.accessTokenIndex + 1);
-        const data: ICompletion = {...openAiCompletionsConfig,model: this.customModel || openAiCompletionsConfig.model};
-        data.messages = [
-            systemContent,
-            suggestContent,
-            {
-                role: 'user',
-                content: change
-            }
-        ];
-        const response = await this.apiClient.post('/chat/completions', data, {
+    async reviewCodeChange(diff: string): Promise<string> {
+        const tokenIndex = this.getNextTokenIndex();
+        
+        const response = await this.apiClient.post('/chat/completions', {
+            ...OPENAI_CONFIG,
+            model: this.model,
+            messages: [
+                openAiSystemMessage,
+                openAiUserMessage,
+                { role: 'user', content: diff }
+            ],
+        }, {
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.accessTokens[newIndex]}`
+                'Authorization': `Bearer ${this.accessTokens[tokenIndex]}`
             }
         });
-        return response.data.choices?.[0]?.message?.content;
+        
+        return response.data.choices?.[0]?.message?.content || '';
+    }
+
+    private getNextTokenIndex(): number {
+        this.accessTokenIndex = (this.accessTokenIndex + 1) % this.accessTokens.length;
+        return this.accessTokenIndex;
     }
 }
