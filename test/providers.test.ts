@@ -60,11 +60,12 @@ describe('review profile parsing', () => {
     it('defaults an omitted profile to standard and accepts security', () => {
         expect(parseReviewProfile(undefined)).toBe('standard');
         expect(parseReviewProfile('security')).toBe('security');
+        expect(parseReviewProfile('wordpress-security')).toBe('wordpress-security');
     });
 
     it('rejects unsupported profiles', () => {
         expect(() => parseReviewProfile('offensive')).toThrow(
-            'Review profile must be either "standard" or "security".',
+            'Review profile must be "standard", "security", or "wordpress-security".',
         );
     });
 });

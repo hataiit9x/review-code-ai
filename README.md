@@ -36,7 +36,7 @@ Options:
   -org, --organization-id <string>    OpenAI Organization ID (optional)
   -c, --custom-model <string>         Custom Model ID (default: "gpt-3.5-turbo")
   -mode, --mode <string>              AI mode: "openai" or "gemini" (default: "openai")
-  --review-profile <profile>          Review profile: "standard" or "security" (default: "standard")
+  --review-profile <profile>          Review profile: "standard", "security", or "wordpress-security" (default: "standard")
   -h, --help                          Display help
 ```
 
@@ -45,6 +45,12 @@ Options:
 Use `--review-profile security` for evidence-based source-code security assistance. The profile reports only findings supported by direct code evidence and separates confirmed evidence from assumptions. It does not generate exploit payloads or instructions for attacking live systems.
 
 The default `standard` profile remains unchanged. Security findings are defensive assistance and require human security review; they are not a replacement for that review.
+
+### WordPress defensive security profile
+
+Use `--review-profile wordpress-security` to prioritize WordPress AJAX and REST authorization, admin handlers, capabilities, nonces, input/output boundaries, `$wpdb` queries, uploads and filesystem operations, and payment or membership integrity paths. It requires code-path evidence and does not report an issue merely because a function or hook name appears.
+
+The profile names a minimum plausible attacker role only when the changed code supports it; otherwise it reports `insufficient evidence`. Limitations include incomplete diffs, behavior in unchanged files, runtime hook registration, WordPress/plugin configuration, version-specific behavior, and external payment or membership systems. Results are defensive assistance and require human review and targeted testing.
 
 ### Example
 

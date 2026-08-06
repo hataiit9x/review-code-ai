@@ -43,8 +43,8 @@ async function processChange(
                 line: getReviewLine(linePosition),
             };
             const reviewResult = await aiClient.review(reviewRequest);
-            const suggestion = reviewProfile === 'security'
-                ? formatSecurityFindings(parseSecurityReview(reviewResult.text, reviewRequest))
+            const suggestion = reviewProfile !== 'standard'
+                ? formatSecurityFindings(parseSecurityReview(reviewResult.text, reviewRequest), reviewProfile)
                 : reviewResult.text;
 
             if (!suggestion) continue;

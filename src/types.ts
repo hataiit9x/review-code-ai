@@ -8,7 +8,7 @@ export interface ReviewRequest {
     line?: number;
 }
 
-export type ReviewProfile = 'standard' | 'security';
+export type ReviewProfile = 'standard' | 'security' | 'wordpress-security';
 
 export type AIProviderName = 'openai' | 'gemini';
 

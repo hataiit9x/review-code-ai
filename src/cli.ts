@@ -11,7 +11,11 @@ export const parseReviewProfile = (value: unknown): ReviewProfile => {
         return 'security';
     }
 
-    throw new Error('Review profile must be either "standard" or "security".');
+    if (value === 'wordpress-security') {
+        return 'wordpress-security';
+    }
+
+    throw new Error('Review profile must be "standard", "security", or "wordpress-security".');
 };
 
 /**
@@ -28,5 +32,5 @@ export const createCliProgram = (): Command => {
         .option('-org, --organization-id <number>', 'Organization ID')
         .option('-c, --custom-model <string>', 'Custom Model ID', DEFAULT_OPENAI_MODEL)
         .option('-mode, --mode <string>', 'Mode: openai or gemini', 'openai')
-        .option('--review-profile <profile>', 'Review profile: standard or security', 'standard');
+        .option('--review-profile <profile>', 'Review profile: standard, security, or wordpress-security', 'standard');
 };
