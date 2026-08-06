@@ -22,10 +22,10 @@ export const getLinePosition = (matches: RegExpMatchArray, diffBlock: string): I
     const lineObj: ILinePosition = {};
     const lastLine = diffBlock.split(/\r?\n/).reverse()[1]?.trim();
     
-    const oldLineStart = +matches[1];
-    const oldLineEnd = +matches[2] || 0;
-    const newLineStart = +matches[3];
-    const newLineEnd = +matches[4] || 0;
+    const oldLineStart = +matches[1]!;
+    const oldLineEnd = +matches[2]! || 0;
+    const newLineStart = +matches[3]!;
+    const newLineEnd = +matches[4]! || 0;
 
     if (lastLine?.[0] === '+') {
         lineObj.new_line = newLineStart + newLineEnd - 1;

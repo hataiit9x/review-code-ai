@@ -4,10 +4,10 @@ import { IGitLabConfig, IMergeRequestInfo, IDiffChange, ILinePosition } from './
 const parseLastDiff = (gitDiff: string): ILinePosition => {
     const diffList = gitDiff.split('\n').reverse();
     const lastLineFirstChar = diffList?.[1]?.[0];
-    const lastDiff = diffList.find((item) => /^@@ \-\d+,\d+ \+\d+,\d+ @@/g.test(item)) || '';
+    const lastDiff = diffList.find((item) => /^@@ -\d+,\d+ \+\d+,\d+ @@/g.test(item)) || '';
 
-    const [lastOldLineCount, lastNewLineCount] = lastDiff
-        .replace(/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@.*/g, (_$0, $1, $2, $3, $4) => {
+    const [lastOldLineCount = '', lastNewLineCount = ''] = lastDiff
+        .replace(/@@ -(\d+),(\d+) \+(\d+),(\d+) @@.*/g, (_$0, $1, $2, $3, $4) => {
             return `${+$1 + +$2},${+$3 + +$4}`;
         })
         .split(',');

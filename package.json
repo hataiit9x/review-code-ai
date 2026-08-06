@@ -7,7 +7,10 @@
   },
   "scripts": {
     "start": "tsc --watch",
-    "build": "tsc"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "lint": "eslint src test bin",
+    "test": "vitest run"
   },
   "files": [
     "lib",
@@ -44,5 +47,11 @@
     "Gitlab CI",
     "Gitlab"
   ],
-  "author": "Tai.Ha"
+  "author": "Tai.Ha",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "typescript-eslint": "^8.66.0",
+    "vitest": "^4.1.10"
+  }
 }
