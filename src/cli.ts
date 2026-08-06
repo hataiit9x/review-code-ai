@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { DEFAULT_OPENAI_MODEL } from './openai-config';
 
 /**
  * Create the CLI parser with the existing public options and defaults.
@@ -12,6 +13,6 @@ export const createCliProgram = (): Command => {
         .option('-p, --project-id <number>', 'GitLab Project ID')
         .option('-m, --merge-request-id <string>', 'GitLab Merge Request ID')
         .option('-org, --organization-id <number>', 'Organization ID')
-        .option('-c, --custom-model <string>', 'Custom Model ID', 'gpt-3.5-turbo')
+        .option('-c, --custom-model <string>', 'Custom Model ID', DEFAULT_OPENAI_MODEL)
         .option('-mode, --mode <string>', 'Mode: openai or gemini', 'openai');
 };

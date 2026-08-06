@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createCliProgram } from '../src/cli';
+import { DEFAULT_OPENAI_MODEL } from '../src/openai-config';
 
 describe('CLI argument parsing', () => {
     it('keeps the existing defaults', () => {
@@ -10,7 +11,7 @@ describe('CLI argument parsing', () => {
         expect(options).toMatchObject({
             gitlabApiUrl: 'https://gitlab.com/api/v4',
             openaiApiUrl: 'https://api.openai.com/v1',
-            customModel: 'gpt-3.5-turbo',
+            customModel: DEFAULT_OPENAI_MODEL,
             mode: 'openai',
         });
     });

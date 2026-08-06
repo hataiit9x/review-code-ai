@@ -739,6 +739,11 @@ obug@^2.1.1:
   resolved "https://registry.npmjs.org/obug/-/obug-2.1.4.tgz"
   integrity sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==
 
+openai@^7.4.0:
+  version "7.4.0"
+  resolved "https://registry.npmjs.org/openai/-/openai-7.4.0.tgz"
+  integrity sha512-+C9Muit5x8j9R8ej8ZzVgKcrVDtqFqTy9gxFdov0EItLgU68zrJtF9ZeT0cyqJQW9S3PCJkdFgADtRGquRBtew==
+
 optionator@^0.9.3:
   version "0.9.4"
   resolved "https://registry.npmjs.org/optionator/-/optionator-0.9.4.tgz"

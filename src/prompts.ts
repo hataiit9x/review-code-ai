@@ -1,3 +1,5 @@
+import { DEFAULT_OPENAI_MODEL } from './openai-config';
+
 /**
  * System prompt for code review
  */
@@ -36,7 +38,7 @@ export const openAiUserMessage = {
 /**
  * Default model configurations
  */
-export const DEFAULT_OPENAI_MODEL = "gpt-3.5-turbo";
+export { DEFAULT_OPENAI_MODEL };
 export const DEFAULT_GEMINI_MODEL = "gemini-1.5-flash-latest";
 
 export const OPENAI_CONFIG = {
