@@ -3,7 +3,12 @@
  */
 export interface ReviewRequest {
     diff: string;
+    profile?: ReviewProfile;
+    filePath?: string;
+    line?: number;
 }
+
+export type ReviewProfile = 'standard' | 'security';
 
 export type AIProviderName = 'openai' | 'gemini';
 

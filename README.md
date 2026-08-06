@@ -36,8 +36,15 @@ Options:
   -org, --organization-id <string>    OpenAI Organization ID (optional)
   -c, --custom-model <string>         Custom Model ID (default: "gpt-3.5-turbo")
   -mode, --mode <string>              AI mode: "openai" or "gemini" (default: "openai")
+  --review-profile <profile>          Review profile: "standard" or "security" (default: "standard")
   -h, --help                          Display help
 ```
+
+### Defensive security profile
+
+Use `--review-profile security` for evidence-based source-code security assistance. The profile reports only findings supported by direct code evidence and separates confirmed evidence from assumptions. It does not generate exploit payloads or instructions for attacking live systems.
+
+The default `standard` profile remains unchanged. Security findings are defensive assistance and require human security review; they are not a replacement for that review.
 
 ### Example
 

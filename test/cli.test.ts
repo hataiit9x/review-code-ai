@@ -13,6 +13,7 @@ describe('CLI argument parsing', () => {
             openaiApiUrl: 'https://api.openai.com/v1',
             customModel: DEFAULT_OPENAI_MODEL,
             mode: 'openai',
+            reviewProfile: 'standard',
         });
     });
 
@@ -39,6 +40,8 @@ describe('CLI argument parsing', () => {
                 'test-model',
                 '-mode',
                 'gemini',
+                '--review-profile',
+                'security',
             ], { from: 'node' })
             .opts();
 
@@ -52,6 +55,7 @@ describe('CLI argument parsing', () => {
             organizationId: '99',
             customModel: 'test-model',
             mode: 'gemini',
+            reviewProfile: 'security',
         });
     });
 
@@ -66,6 +70,7 @@ describe('CLI argument parsing', () => {
             '-org, --organization-id <number>',
             '-c, --custom-model <string>',
             '-mode, --mode <string>',
+            '--review-profile <profile>',
         ]);
     });
 });

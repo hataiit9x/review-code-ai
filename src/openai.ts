@@ -6,7 +6,7 @@ import OpenAISdk, {
 } from 'openai';
 import { IAIClient, ReviewRequest, ReviewResult } from './types';
 import { DEFAULT_OPENAI_MODEL, OPENAI_MAX_RETRIES, OPENAI_REQUEST_TIMEOUT_MS } from './openai-config';
-import { REVIEW_INSTRUCTIONS, SYSTEM_PROMPT } from './prompts';
+import { getReviewPrompts } from './prompts';
 
 export interface OpenAIProviderOptions {
     /** Optional project header supported by the OpenAI SDK. */
@@ -79,10 +79,11 @@ export class OpenAI implements IAIClient {
 
     async review(request: ReviewRequest): Promise<ReviewResult> {
         try {
+            const prompts = getReviewPrompts(request);
             const response = await this.apiClient.responses.create({
                 model: this.model,
-                instructions: `${SYSTEM_PROMPT}\n\n${REVIEW_INSTRUCTIONS}`,
-                input: request.diff,
+                instructions: `${prompts.system}\n\n${prompts.instructions}`,
+                input: prompts.input,
                 stream: false,
             });
 

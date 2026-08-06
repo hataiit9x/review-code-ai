@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { SYSTEM_PROMPT, REVIEW_INSTRUCTIONS, DEFAULT_GEMINI_MODEL, GEMINI_SAFETY_SETTINGS } from './prompts';
+import { DEFAULT_GEMINI_MODEL, GEMINI_SAFETY_SETTINGS, getReviewPrompts } from './prompts';
 import { IAIClient, ReviewRequest, ReviewResult } from './types';
 
 export class GeminiProviderError extends Error {
@@ -43,19 +43,20 @@ export class Gemini implements IAIClient {
 
     async review(request: ReviewRequest): Promise<ReviewResult> {
         try {
+            const prompts = getReviewPrompts(request);
             const response = await this.apiClient.post(
                 `/${this.model}:generateContent?key=${this.apiKey}`,
                 {
                     contents: [
                         {
                             role: 'user',
-                            parts: [{ text: request.diff }],
+                            parts: [{ text: prompts.input }],
                         },
                     ],
                     systemInstruction: {
                         parts: [
-                            { text: SYSTEM_PROMPT },
-                            { text: REVIEW_INSTRUCTIONS },
+                            { text: prompts.system },
+                            { text: prompts.instructions },
                         ],
                     },
                     safetySettings: GEMINI_SAFETY_SETTINGS,

@@ -1,7 +1,8 @@
 import { GitLab } from './gitlab';
-import { createCliProgram } from './cli';
+import { createCliProgram, parseReviewProfile } from './cli';
 import { createAIProvider } from './provider-factory';
-import { IAIProvider, IDiffChange } from './types';
+import { formatSecurityFindings, parseSecurityReview } from './security-review';
+import { IAIProvider, IDiffChange, ReviewProfile, ReviewRequest } from './types';
 import { delay, getDiffBlocks, getLinePosition } from './utils';
 
 const program = createCliProgram();
@@ -14,7 +15,12 @@ function shouldSkipChange(change: IDiffChange): boolean {
     return change.renamed_file || change.deleted_file || !change.diff?.startsWith('@@');
 }
 
-async function processChange(change: IDiffChange, aiClient: IAIProvider, gitlab: GitLab): Promise<void> {
+async function processChange(
+    change: IDiffChange,
+    aiClient: IAIProvider,
+    gitlab: GitLab,
+    reviewProfile: ReviewProfile,
+): Promise<void> {
     const diffBlocks = getDiffBlocks(change.diff);
     
     while (diffBlocks.length > 0) {
@@ -30,8 +36,19 @@ async function processChange(change: IDiffChange, aiClient: IAIProvider, gitlab:
             linePosition.old_line && linePosition.old_line <= 0) continue;
 
         try {
-            const reviewResult = await aiClient.review({ diff: block });
-            await gitlab.addReviewComment(linePosition, change, reviewResult.text);
+            const reviewRequest: ReviewRequest = {
+                diff: block,
+                profile: reviewProfile,
+                filePath: change.new_path,
+                line: getReviewLine(linePosition),
+            };
+            const reviewResult = await aiClient.review(reviewRequest);
+            const suggestion = reviewProfile === 'security'
+                ? formatSecurityFindings(parseSecurityReview(reviewResult.text, reviewRequest))
+                : reviewResult.text;
+
+            if (!suggestion) continue;
+            await gitlab.addReviewComment(linePosition, change, suggestion);
         } catch (error: unknown) {
             if (isRateLimitError(error)) {
                 console.log('Rate limit exceeded, retrying in 60s...');
@@ -44,6 +61,16 @@ async function processChange(change: IDiffChange, aiClient: IAIProvider, gitlab:
     }
 }
 
+function getReviewLine(linePosition: { new_line?: number; old_line?: number }): number | undefined {
+    if (typeof linePosition.new_line === 'number' && linePosition.new_line > 0) {
+        return linePosition.new_line;
+    }
+
+    return typeof linePosition.old_line === 'number' && linePosition.old_line > 0
+        ? linePosition.old_line
+        : undefined;
+}
+
 function isRateLimitError(error: unknown): boolean {
     return typeof error === 'object' && error !== null && 
            'response' in error && 
@@ -53,6 +80,7 @@ function isRateLimitError(error: unknown): boolean {
 
 async function run(): Promise<void> {
     const opts = program.opts();
+    const reviewProfile = parseReviewProfile(opts.reviewProfile);
     
     const gitlab = new GitLab({
         gitlabApiUrl: opts.gitlabApiUrl,
@@ -86,7 +114,7 @@ async function run(): Promise<void> {
 
     for (const change of changes) {
         if (shouldSkipChange(change)) continue;
-        await processChange(change, aiClient, gitlab);
+        await processChange(change, aiClient, gitlab, reviewProfile);
     }
 
     console.log('Done');

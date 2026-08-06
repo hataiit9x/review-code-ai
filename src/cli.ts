@@ -1,5 +1,18 @@
 import { Command } from 'commander';
 import { DEFAULT_OPENAI_MODEL } from './openai-config';
+import { ReviewProfile } from './types';
+
+export const parseReviewProfile = (value: unknown): ReviewProfile => {
+    if (value === undefined || value === 'standard') {
+        return 'standard';
+    }
+
+    if (value === 'security') {
+        return 'security';
+    }
+
+    throw new Error('Review profile must be either "standard" or "security".');
+};
 
 /**
  * Create the CLI parser with the existing public options and defaults.
@@ -14,5 +27,6 @@ export const createCliProgram = (): Command => {
         .option('-m, --merge-request-id <string>', 'GitLab Merge Request ID')
         .option('-org, --organization-id <number>', 'Organization ID')
         .option('-c, --custom-model <string>', 'Custom Model ID', DEFAULT_OPENAI_MODEL)
-        .option('-mode, --mode <string>', 'Mode: openai or gemini', 'openai');
+        .option('-mode, --mode <string>', 'Mode: openai or gemini', 'openai')
+        .option('--review-profile <profile>', 'Review profile: standard or security', 'standard');
 };

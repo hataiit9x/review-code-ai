@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import { describe, expect, it, vi } from 'vitest';
+import { parseReviewProfile } from '../src/cli';
 import { Gemini, GeminiProviderError } from '../src/gemini';
 import { OpenAI, OpenAIProviderError } from '../src/openai';
 import { createAIProvider } from '../src/provider-factory';
@@ -52,6 +53,19 @@ describe('provider selection', () => {
         } finally {
             log.mockRestore();
         }
+    });
+});
+
+describe('review profile parsing', () => {
+    it('defaults an omitted profile to standard and accepts security', () => {
+        expect(parseReviewProfile(undefined)).toBe('standard');
+        expect(parseReviewProfile('security')).toBe('security');
+    });
+
+    it('rejects unsupported profiles', () => {
+        expect(() => parseReviewProfile('offensive')).toThrow(
+            'Review profile must be either "standard" or "security".',
+        );
     });
 });
 
