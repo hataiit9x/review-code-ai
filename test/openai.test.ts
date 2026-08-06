@@ -54,7 +54,11 @@ describe('OpenAI provider', () => {
             { projectId: 'project-1', fetch },
         );
 
-        await expect(provider.reviewCodeChange('diff content')).resolves.toBe('Review result');
+        await expect(provider.review({ diff: 'diff content' })).resolves.toEqual({
+            provider: 'openai',
+            model: 'configured-model',
+            text: 'Review result',
+        });
 
         expect(requests).toHaveLength(1);
         const request = requests[0]!;

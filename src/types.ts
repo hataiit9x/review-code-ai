@@ -1,7 +1,33 @@
 /**
- * Common interface for AI clients (OpenAI, Gemini, etc.)
+ * The provider-independent input for a code review.
  */
-export interface IAIClient {
+export interface ReviewRequest {
+    diff: string;
+}
+
+export type AIProviderName = 'openai' | 'gemini';
+
+/**
+ * The normalized result returned by every AI provider.
+ */
+export interface ReviewResult {
+    provider: AIProviderName;
+    model: string;
+    text: string;
+}
+
+/**
+ * Small common provider contract used by the review orchestration code.
+ */
+export interface IAIProvider {
+    review(request: ReviewRequest): Promise<ReviewResult>;
+}
+
+/**
+ * Backward-compatible client contract for callers that still expect a text
+ * response from reviewCodeChange.
+ */
+export interface IAIClient extends IAIProvider {
     reviewCodeChange(diff: string): Promise<string>;
 }
 

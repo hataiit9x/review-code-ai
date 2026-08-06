@@ -1,8 +1,7 @@
 import { GitLab } from './gitlab';
-import { OpenAI } from './openai';
-import { Gemini } from './gemini';
 import { createCliProgram } from './cli';
-import { IAIClient, IDiffChange } from './types';
+import { createAIProvider } from './provider-factory';
+import { IAIProvider, IDiffChange } from './types';
 import { delay, getDiffBlocks, getLinePosition } from './utils';
 
 const program = createCliProgram();
@@ -11,20 +10,11 @@ program.parse(process.argv);
 const LINE_REGEX = /@@\s-(\d+)(?:,(\d+))?\s\+(\d+)(?:,(\d+))?\s@@/;
 const RATE_LIMIT_DELAY = 60 * 1000;
 
-function createAIClient(mode: string, apiUrl: string, accessToken: string, orgId?: string, model?: string): IAIClient {
-    if (mode === 'gemini') {
-        console.log('Creating Gemini client...');
-        return new Gemini(apiUrl, accessToken, model);
-    }
-    console.log('Creating OpenAI client...');
-    return new OpenAI(apiUrl, accessToken, orgId, model);
-}
-
 function shouldSkipChange(change: IDiffChange): boolean {
     return change.renamed_file || change.deleted_file || !change.diff?.startsWith('@@');
 }
 
-async function processChange(change: IDiffChange, aiClient: IAIClient, gitlab: GitLab): Promise<void> {
+async function processChange(change: IDiffChange, aiClient: IAIProvider, gitlab: GitLab): Promise<void> {
     const diffBlocks = getDiffBlocks(change.diff);
     
     while (diffBlocks.length > 0) {
@@ -40,8 +30,8 @@ async function processChange(change: IDiffChange, aiClient: IAIClient, gitlab: G
             linePosition.old_line && linePosition.old_line <= 0) continue;
 
         try {
-            const suggestion = await aiClient.reviewCodeChange(block);
-            await gitlab.addReviewComment(linePosition, change, suggestion);
+            const reviewResult = await aiClient.review({ diff: block });
+            await gitlab.addReviewComment(linePosition, change, reviewResult.text);
         } catch (error: unknown) {
             if (isRateLimitError(error)) {
                 console.log('Rate limit exceeded, retrying in 60s...');
@@ -71,7 +61,7 @@ async function run(): Promise<void> {
         mergeRequestId: opts.mergeRequestId,
     });
 
-    const aiClient = createAIClient(
+    const aiClient = createAIProvider(
         opts.mode,
         opts.openaiApiUrl,
         opts.openaiAccessToken,

@@ -4,7 +4,7 @@ import OpenAISdk, {
     APIError,
     type ClientOptions,
 } from 'openai';
-import { IAIClient } from './types';
+import { IAIClient, ReviewRequest, ReviewResult } from './types';
 import { DEFAULT_OPENAI_MODEL, OPENAI_MAX_RETRIES, OPENAI_REQUEST_TIMEOUT_MS } from './openai-config';
 import { REVIEW_INSTRUCTIONS, SYSTEM_PROMPT } from './prompts';
 
@@ -77,16 +77,20 @@ export class OpenAI implements IAIClient {
         this.apiClient = new OpenAISdk(clientOptions);
     }
 
-    async reviewCodeChange(diff: string): Promise<string> {
+    async review(request: ReviewRequest): Promise<ReviewResult> {
         try {
             const response = await this.apiClient.responses.create({
                 model: this.model,
                 instructions: `${SYSTEM_PROMPT}\n\n${REVIEW_INSTRUCTIONS}`,
-                input: diff,
+                input: request.diff,
                 stream: false,
             });
 
-            return this.getResponseText(response);
+            return {
+                provider: 'openai',
+                model: this.model,
+                text: this.getResponseText(response),
+            };
         } catch (error: unknown) {
             if (error instanceof OpenAIProviderError) {
                 throw error;
@@ -94,6 +98,11 @@ export class OpenAI implements IAIClient {
 
             throw this.toUserFacingError(error);
         }
+    }
+
+    async reviewCodeChange(diff: string): Promise<string> {
+        const result = await this.review({ diff });
+        return result.text;
     }
 
     private getNextAccessToken(): string {
