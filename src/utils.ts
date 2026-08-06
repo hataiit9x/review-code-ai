@@ -19,22 +19,46 @@ export const getDiffBlocks = (diff: string): string[] => {
  * Extract line position from diff block matches
  */
 export const getLinePosition = (matches: RegExpMatchArray, diffBlock: string): ILinePosition => {
-    const lineObj: ILinePosition = {};
-    const lastLine = diffBlock.split(/\r?\n/).reverse()[1]?.trim();
-    
-    const oldLineStart = +matches[1]!;
-    const oldLineEnd = +matches[2]! || 0;
-    const newLineStart = +matches[3]!;
-    const newLineEnd = +matches[4]! || 0;
+    let oldLine = Number(matches[1]);
+    let newLine = Number(matches[3]);
+    let lastAddedLine: number | undefined;
+    let lastDeletedLine: number | undefined;
+    let lastContextPosition: ILinePosition | undefined;
 
-    if (lastLine?.[0] === '+') {
-        lineObj.new_line = newLineStart + newLineEnd - 1;
-    } else if (lastLine?.[0] === '-') {
-        lineObj.old_line = oldLineStart + oldLineEnd - 1;
-    } else {
-        lineObj.new_line = newLineStart + newLineEnd - 1;
-        lineObj.old_line = oldLineStart + oldLineEnd - 1;
+    for (const line of diffBlock.split(/\r?\n/).slice(1)) {
+        if (line.startsWith('\\')) {
+            continue;
+        }
+
+        if (line.startsWith('+')) {
+            lastAddedLine = newLine;
+            newLine += 1;
+            continue;
+        }
+
+        if (line.startsWith('-')) {
+            lastDeletedLine = oldLine;
+            oldLine += 1;
+            continue;
+        }
+
+        if (line.startsWith(' ')) {
+            lastContextPosition = {
+                old_line: oldLine,
+                new_line: newLine,
+            };
+            oldLine += 1;
+            newLine += 1;
+        }
     }
-    
-    return lineObj;
+
+    if (lastAddedLine !== undefined) {
+        return { new_line: lastAddedLine };
+    }
+
+    if (lastDeletedLine !== undefined) {
+        return { old_line: lastDeletedLine };
+    }
+
+    return lastContextPosition ?? {};
 };

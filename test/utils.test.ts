@@ -45,7 +45,7 @@ describe('diff utilities', () => {
         const diffBlock = '@@ -2,3 +4,4 @@\n context\n+added\n';
 
         expect(getLinePosition(getHunkMatch(diffBlock), diffBlock)).toEqual({
-            new_line: 7,
+            new_line: 5,
         });
     });
 
@@ -53,7 +53,7 @@ describe('diff utilities', () => {
         const diffBlock = '@@ -2,3 +4,2 @@\n context\n-deleted\n';
 
         expect(getLinePosition(getHunkMatch(diffBlock), diffBlock)).toEqual({
-            old_line: 4,
+            old_line: 3,
         });
     });
 
@@ -61,8 +61,8 @@ describe('diff utilities', () => {
         const diffBlock = '@@ -2,3 +4,3 @@\n context\n';
 
         expect(getLinePosition(getHunkMatch(diffBlock), diffBlock)).toEqual({
-            old_line: 4,
-            new_line: 6,
+            old_line: 2,
+            new_line: 4,
         });
     });
 });

@@ -44,7 +44,12 @@ export interface IGitLabConfig {
     gitlabAccessToken: string;
     projectId: string;
     mergeRequestId: string;
+    timeoutMs?: number;
+    maxRetries?: number;
+    retryBaseDelayMs?: number;
 }
+
+export type DiffChangeKind = 'text' | 'deleted' | 'renamed' | 'binary' | 'truncated' | 'unavailable';
 
 /**
  * Merge Request information from GitLab API
@@ -67,6 +72,9 @@ export interface IDiffChange {
     old_path: string;
     renamed_file: boolean;
     deleted_file: boolean;
+    binaryFile?: boolean;
+    generatedFile?: boolean;
+    diffTruncated?: boolean;
     old_line?: number;
     new_line?: number;
 }

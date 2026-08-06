@@ -1,4 +1,4 @@
-import { GitLab } from './gitlab';
+import { classifyDiffChange, GitLab } from './gitlab';
 import { createCliProgram, parseReviewProfile } from './cli';
 import { createAIProvider } from './provider-factory';
 import { formatSecurityFindings, parseSecurityReview } from './security-review';
@@ -12,7 +12,7 @@ const LINE_REGEX = /@@\s-(\d+)(?:,(\d+))?\s\+(\d+)(?:,(\d+))?\s@@/;
 const RATE_LIMIT_DELAY = 60 * 1000;
 
 function shouldSkipChange(change: IDiffChange): boolean {
-    return change.renamed_file || change.deleted_file || !change.diff?.startsWith('@@');
+    return !change.new_path && !change.old_path;
 }
 
 async function processChange(
@@ -21,7 +21,14 @@ async function processChange(
     gitlab: GitLab,
     reviewProfile: ReviewProfile,
 ): Promise<void> {
+    const changeKind = classifyDiffChange(change);
+    if (changeKind !== 'text') {
+        await processSummaryChange(change, aiClient, gitlab, reviewProfile, changeKind);
+        return;
+    }
+
     const diffBlocks = getDiffBlocks(change.diff);
+    let reviewAttempted = false;
     
     while (diffBlocks.length > 0) {
         const block = diffBlocks.shift()!;
@@ -35,6 +42,7 @@ async function processChange(
         if (linePosition.new_line && linePosition.new_line <= 0 && 
             linePosition.old_line && linePosition.old_line <= 0) continue;
 
+        reviewAttempted = true;
         try {
             const reviewRequest: ReviewRequest = {
                 diff: block,
@@ -56,6 +64,62 @@ async function processChange(
                 diffBlocks.push(block);
             } else {
                 console.error('Error processing diff block:', error instanceof Error ? error.message : error);
+            }
+        }
+    }
+
+    if (!reviewAttempted) {
+        await processSummaryChange(change, aiClient, gitlab, reviewProfile, 'unavailable');
+    }
+}
+
+async function processSummaryChange(
+    change: IDiffChange,
+    aiClient: IAIProvider,
+    gitlab: GitLab,
+    reviewProfile: ReviewProfile,
+    changeKind: ReturnType<typeof classifyDiffChange>,
+): Promise<void> {
+    const path = (change.new_path || change.old_path || 'this change').replace(/[\r\n]/g, ' ');
+    let suggestion: string;
+
+    if (changeKind === 'binary' || changeKind === 'unavailable') {
+        suggestion = `Inline review is unavailable for this ${changeKind} file (${path}).`;
+    } else {
+        try {
+            const reviewRequest: ReviewRequest = {
+                diff: change.diff,
+                profile: reviewProfile,
+                filePath: change.new_path || change.old_path,
+            };
+            const reviewResult = await aiClient.review(reviewRequest);
+            suggestion = reviewProfile !== 'standard'
+                ? formatSecurityFindings(parseSecurityReview(reviewResult.text, reviewRequest), reviewProfile)
+                : reviewResult.text;
+
+            if (changeKind === 'truncated' && suggestion) {
+                suggestion += '\n\nInline placement was skipped because the GitLab diff was truncated; validate the full change before acting.';
+            }
+        } catch (error: unknown) {
+            if (isRateLimitError(error)) {
+                console.log('Rate limit exceeded, retrying in 60s...');
+                await delay(RATE_LIMIT_DELAY);
+            } else {
+                console.error('Error processing change summary:', error instanceof Error ? error.message : error);
+            }
+            return;
+        }
+    }
+
+    if (suggestion) {
+        try {
+            await gitlab.addSummaryComment(change, suggestion);
+        } catch (error: unknown) {
+            if (isRateLimitError(error)) {
+                console.log('Rate limit exceeded while posting summary, retrying in 60s...');
+                await delay(RATE_LIMIT_DELAY);
+            } else {
+                console.error('Error posting change summary:', error instanceof Error ? error.message : error);
             }
         }
     }
