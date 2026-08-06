@@ -1,7 +1,38 @@
 /**
- * Common interface for AI clients (OpenAI, Gemini, etc.)
+ * The provider-independent input for a code review.
  */
-export interface IAIClient {
+export interface ReviewRequest {
+    diff: string;
+    profile?: ReviewProfile;
+    filePath?: string;
+    line?: number;
+}
+
+export type ReviewProfile = 'standard' | 'security' | 'wordpress-security';
+
+export type AIProviderName = 'openai' | 'gemini';
+
+/**
+ * The normalized result returned by every AI provider.
+ */
+export interface ReviewResult {
+    provider: AIProviderName;
+    model: string;
+    text: string;
+}
+
+/**
+ * Small common provider contract used by the review orchestration code.
+ */
+export interface IAIProvider {
+    review(request: ReviewRequest): Promise<ReviewResult>;
+}
+
+/**
+ * Backward-compatible client contract for callers that still expect a text
+ * response from reviewCodeChange.
+ */
+export interface IAIClient extends IAIProvider {
     reviewCodeChange(diff: string): Promise<string>;
 }
 
@@ -13,7 +44,13 @@ export interface IGitLabConfig {
     gitlabAccessToken: string;
     projectId: string;
     mergeRequestId: string;
+    timeoutMs?: number;
+    maxRetries?: number;
+    retryBaseDelayMs?: number;
+    allowPrivateApiUrls?: boolean;
 }
+
+export type DiffChangeKind = 'text' | 'deleted' | 'renamed' | 'binary' | 'truncated' | 'unavailable';
 
 /**
  * Merge Request information from GitLab API
@@ -36,6 +73,9 @@ export interface IDiffChange {
     old_path: string;
     renamed_file: boolean;
     deleted_file: boolean;
+    binaryFile?: boolean;
+    generatedFile?: boolean;
+    diffTruncated?: boolean;
     old_line?: number;
     new_line?: number;
 }

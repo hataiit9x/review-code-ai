@@ -7,7 +7,10 @@
   },
   "scripts": {
     "start": "tsc --watch",
-    "build": "tsc"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "lint": "eslint src test bin",
+    "test": "vitest run"
   },
   "files": [
     "lib",
@@ -24,6 +27,7 @@
     "@types/node": "^20.2.1",
     "axios": "^1.4.0",
     "commander": "^10.0.1",
+    "openai": "^7.4.0",
     "typescript": "^5.0.4"
   },
   "publishConfig": {
@@ -44,5 +48,11 @@
     "Gitlab CI",
     "Gitlab"
   ],
-  "author": "Tai.Ha"
+  "author": "Tai.Ha",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "typescript-eslint": "^8.66.0",
+    "vitest": "^4.1.10"
+  }
 }
