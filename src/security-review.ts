@@ -61,6 +61,8 @@ const UNSAFE_ATTACK_PATTERNS: readonly RegExp[] = [
     /\b(?:sqlmap|metasploit|nmap)\b/i,
     /\b(?:run|execute|send|post)\s+(?:this|the)\s+(?:payload|exploit|attack)\b/i,
     /\b(?:curl|wget)\b[^\r\n]*https?:\/\//i,
+    /\b(?:attack|exploit|compromise)\s+(?:commands?|instructions?|steps?)\b/i,
+    /\b(?:live|production)\s+(?:system|service|site)\b[^.\n]{0,120}\b(?:attack|exploit|compromise)\b/i,
 ];
 
 /**

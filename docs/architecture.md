@@ -60,7 +60,7 @@ The public profile values are:
 7. Create a positioned discussion only when the changed-line position is valid.
 8. Fall back to a summary discussion when GitLab cannot accept an inline position.
 
-GitLab requests use a timeout and bounded retry policy. Retry delays use exponential backoff and honor `Retry-After` values when present. User-facing errors are mapped to safe messages rather than exposing response bodies or authorization headers.
+GitLab requests use a timeout, bounded retry policy, response-size limits, and redirects disabled. Retry delays use exponential backoff and honor `Retry-After` values when present. User-facing errors are mapped to safe messages rather than exposing response bodies or authorization headers. Provider endpoints are validated before credentials are attached; private/local endpoints require the explicit `ALLOW_PRIVATE_API_URLS=true` opt-in.
 
 ### Provider boundary
 
@@ -75,7 +75,7 @@ Both providers return the common `ReviewResult` shape. Provider-specific configu
 
 ### Prompt and result handling
 
-[`src/prompts.ts`](../src/prompts.ts) selects standard, security, or WordPress security instructions. Security prompts put repository content in an explicitly untrusted data block and prohibit attack instructions. [`src/security-review.ts`](../src/security-review.ts) parses the constrained JSON result and discards malformed or unsupported findings before anything is posted to GitLab.
+[`src/prompts.ts`](../src/prompts.ts) selects standard, security, or WordPress security instructions and marks repository content as untrusted data. Security prompts prohibit attack instructions. [`src/security-review.ts`](../src/security-review.ts) parses the constrained JSON result and discards malformed or unsupported findings before anything is posted to GitLab; a separate bounded output filter rejects known unsafe patterns.
 
 Security findings must include direct code evidence from the supplied diff. WordPress findings additionally require code-path evidence, and an attacker role is downgraded to `insufficient evidence` unless its supporting excerpt is present.
 

@@ -1,9 +1,12 @@
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
+import { validateApiBaseUrl } from './api-url';
 import { delay } from './utils';
 import type { DiffChangeKind, IDiffChange, IGitLabConfig, ILinePosition, IMergeRequestInfo } from './types';
 
 export const GITLAB_PAGE_SIZE = 100;
 export const MAX_DIFF_CHARS = 100_000;
+export const MAX_GITLAB_RESPONSE_BYTES = 10 * 1024 * 1024;
+export const MAX_TOTAL_DIFF_CHARS = 10_000_000;
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_RETRIES = 3;
@@ -58,14 +61,24 @@ export class GitLab {
     private discussionsLoaded = false;
 
     constructor(config: IGitLabConfig) {
-        const gitlabApiUrl = config.gitlabApiUrl?.trim().replace(/\/+$/, '');
+        if (!config.gitlabApiUrl?.trim()) {
+            throw new GitLabIntegrationError('GitLab API URL must be an HTTP(S) URL.');
+        }
+
+        let gitlabApiUrl: string;
+        try {
+            gitlabApiUrl = validateApiBaseUrl(
+                config.gitlabApiUrl,
+                'GitLab API',
+                { allowPrivateHosts: config.allowPrivateApiUrls === true },
+            );
+        } catch (error: unknown) {
+            throw new GitLabIntegrationError(error instanceof Error ? error.message : 'GitLab API URL is invalid.');
+        }
+
         const accessToken = config.gitlabAccessToken?.trim();
         const projectId = config.projectId?.trim();
         const mergeRequestId = config.mergeRequestId?.trim();
-
-        if (!gitlabApiUrl || !/^https?:\/\//i.test(gitlabApiUrl)) {
-            throw new GitLabIntegrationError('GitLab API URL must be an HTTP(S) URL.');
-        }
 
         if (!accessToken) {
             throw new GitLabIntegrationError('GitLab access token is required.');
@@ -93,6 +106,9 @@ export class GitLab {
         this.apiClient = axios.create({
             baseURL: gitlabApiUrl,
             timeout: this.timeoutMs,
+            maxContentLength: MAX_GITLAB_RESPONSE_BYTES,
+            maxBodyLength: MAX_GITLAB_RESPONSE_BYTES,
+            maxRedirects: 0,
             headers: {
                 Accept: 'application/json',
                 'Private-Token': accessToken,
@@ -121,6 +137,7 @@ export class GitLab {
 
     async getMergeRequestChanges(): Promise<IDiffChange[]> {
         const changes: IDiffChange[] = [];
+        let totalDiffChars = 0;
         let page = 1;
 
         while (true) {
@@ -136,7 +153,15 @@ export class GitLab {
                 throw new GitLabIntegrationError('GitLab returned an invalid merge request changes response.');
             }
 
-            changes.push(...pageItems.map(normalizeDiffChange));
+            const normalizedItems = pageItems.map(normalizeDiffChange);
+            totalDiffChars += normalizedItems.reduce((total, change) => total + change.diff.length, 0);
+            if (totalDiffChars > MAX_TOTAL_DIFF_CHARS) {
+                throw new GitLabIntegrationError(
+                    'GitLab merge request diff content exceeds the safe review size limit.',
+                );
+            }
+
+            changes.push(...normalizedItems);
 
             const nextPage = getNextPage(response.headers);
             if (nextPage !== undefined) {
@@ -380,7 +405,8 @@ export class GitLab {
         const retryAfterMs = getRetryAfterMs(getResponseHeaders(error));
         const code = getString(isRecord(error) ? error.code : undefined);
         const isTimeout = code === 'ECONNABORTED' || code === 'ETIMEDOUT' || code === 'ERR_CANCELED';
-        const isNetworkFailure = code === 'ERR_NETWORK' || code === 'ENOTFOUND' || code === 'ECONNRESET';
+        const isNetworkFailure = code === 'ERR_NETWORK' || code === 'ENOTFOUND' || code === 'ECONNRESET' ||
+            code === 'ECONNREFUSED' || code === 'EAI_AGAIN' || code === 'EPIPE';
 
         if (isTimeout) {
             return new GitLabIntegrationError(

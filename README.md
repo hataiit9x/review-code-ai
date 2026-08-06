@@ -126,6 +126,7 @@ Environment variables take precedence over command-line values. The legacy secre
 | `GITLAB_ACCESS_TOKEN` | Preferred GitLab access token. |
 | `GITLAB_TOKEN` | Compatibility alias for the GitLab token. |
 | `GITLAB_API_URL` | GitLab API v4 base URL; defaults to `https://gitlab.com/api/v4`. |
+| `ALLOW_PRIVATE_API_URLS` | Set to `true` only for a trusted self-hosted deployment that must use a private/local API host; defaults to disabled. |
 | `GITLAB_PROJECT_ID` | Project ID; the CLI flag remains available. |
 | `GITLAB_MERGE_REQUEST_ID` | Merge-request IID; the CLI flag remains available. |
 | `OPENAI_API_KEY` | Preferred OpenAI-compatible provider key. Comma-separated keys are supported by the OpenAI provider. |
@@ -169,7 +170,7 @@ Do not send confidential source code to a provider unless your organization has 
 - Very large diffs are bounded and marked as truncated. Binary or unavailable diffs do not receive normal inline AI review; deleted, renamed, and truncated changes may be handled through a summary path.
 - Inline placement depends on GitLab diff references and valid changed-line positions. If placement fails, the integration falls back to a summary when possible.
 - The tool does not replace tests, code owners, static analysis, dependency scanning, secret scanning, dynamic testing, threat modeling, or human security review.
-- Security profiles suppress responses that are malformed, lack direct diff evidence, or contain disallowed attack instructions. Suppression can also hide a real issue when the diff lacks enough context.
+- Security profiles suppress responses that are malformed, lack direct diff evidence, or match known attack-oriented output patterns. This is a defense-in-depth filter, not a complete semantic guarantee; suppression can also hide a real issue when the diff lacks enough context.
 - WordPress analysis cannot establish behavior in unchanged files, runtime hook registration, plugin configuration, WordPress version differences, external services, or payment/membership systems unless the diff provides that evidence.
 
 The complete limitation and fallback description is in [`docs/limitations.md`](docs/limitations.md).

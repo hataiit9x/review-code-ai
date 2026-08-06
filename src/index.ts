@@ -2,6 +2,8 @@ import { classifyDiffChange, GitLab } from './gitlab';
 import { createCliProgram, parseReviewProfile } from './cli';
 import { getSafeErrorMessage, resolveReviewConfig, warnAboutLegacySecretFlags } from './config';
 import { createAIProvider } from './provider-factory';
+import { getNextRateLimitRetry } from './retry';
+import { normalizeReviewComment } from './review-output';
 import { formatSecurityFindings, parseSecurityReview } from './security-review';
 import { IAIProvider, IDiffChange, ReviewProfile, ReviewRequest } from './types';
 import { delay, getDiffBlocks, getLinePosition } from './utils';
@@ -11,6 +13,11 @@ program.parse(process.argv);
 
 const LINE_REGEX = /@@\s-(\d+)(?:,(\d+))?\s\+(\d+)(?:,(\d+))?\s@@/;
 const RATE_LIMIT_DELAY = 60 * 1000;
+
+interface ReviewBlock {
+    block: string;
+    rateLimitRetries: number;
+}
 
 function shouldSkipChange(change: IDiffChange): boolean {
     return !change.new_path && !change.old_path;
@@ -29,11 +36,15 @@ async function processChange(
         return;
     }
 
-    const diffBlocks = getDiffBlocks(change.diff);
+    const diffBlocks: ReviewBlock[] = getDiffBlocks(change.diff).map((block) => ({
+        block,
+        rateLimitRetries: 0,
+    }));
     let reviewAttempted = false;
     
     while (diffBlocks.length > 0) {
-        const block = diffBlocks.shift()!;
+        const reviewBlock = diffBlocks.shift()!;
+        const block = reviewBlock.block;
         const matches = LINE_REGEX.exec(block);
         
         if (!matches) continue;
@@ -53,17 +64,26 @@ async function processChange(
                 line: getReviewLine(linePosition),
             };
             const reviewResult = await aiClient.review(reviewRequest);
-            const suggestion = reviewProfile !== 'standard'
+            const suggestion = normalizeReviewComment(reviewProfile !== 'standard'
                 ? formatSecurityFindings(parseSecurityReview(reviewResult.text, reviewRequest), reviewProfile)
-                : reviewResult.text;
+                : reviewResult.text);
 
             if (!suggestion) continue;
             await gitlab.addReviewComment(linePosition, change, suggestion);
         } catch (error: unknown) {
             if (isRateLimitError(error)) {
-                console.log('Rate limit exceeded, retrying in 60s...');
+                const nextRetry = getNextRateLimitRetry(reviewBlock.rateLimitRetries);
+                if (nextRetry === undefined) {
+                    console.error(
+                        'Rate limit retry limit reached for diff block:',
+                        getSafeErrorMessage(error, secrets),
+                    );
+                    continue;
+                }
+
+                console.log(`Rate limit exceeded, retrying in 60s (attempt ${nextRetry})...`);
                 await delay(RATE_LIMIT_DELAY);
-                diffBlocks.push(block);
+                diffBlocks.push({ block, rateLimitRetries: nextRetry });
             } else {
                 console.error('Error processing diff block:', getSafeErrorMessage(error, secrets));
             }
@@ -96,9 +116,9 @@ async function processSummaryChange(
                 filePath: change.new_path || change.old_path,
             };
             const reviewResult = await aiClient.review(reviewRequest);
-            suggestion = reviewProfile !== 'standard'
+            suggestion = normalizeReviewComment(reviewProfile !== 'standard'
                 ? formatSecurityFindings(parseSecurityReview(reviewResult.text, reviewRequest), reviewProfile)
-                : reviewResult.text;
+                : reviewResult.text);
 
             if (changeKind === 'truncated' && suggestion) {
                 suggestion += '\n\nInline placement was skipped because the GitLab diff was truncated; validate the full change before acting.';
@@ -113,6 +133,8 @@ async function processSummaryChange(
             return;
         }
     }
+
+    suggestion = normalizeReviewComment(suggestion);
 
     if (suggestion) {
         try {
@@ -157,6 +179,7 @@ async function run(): Promise<void> {
         gitlabAccessToken: config.gitlabAccessToken,
         projectId: config.projectId,
         mergeRequestId: config.mergeRequestId,
+        allowPrivateApiUrls: config.allowPrivateApiUrls,
     });
 
     const aiClient = createAIProvider(
@@ -164,7 +187,8 @@ async function run(): Promise<void> {
         config.providerApiUrl,
         config.providerAccessToken,
         config.organizationId,
-        config.customModel
+        config.customModel,
+        { allowPrivateApiUrls: config.allowPrivateApiUrls },
     );
 
     try {

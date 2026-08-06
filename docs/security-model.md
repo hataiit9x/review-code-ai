@@ -26,7 +26,7 @@ Use protected and masked CI variables or an external secret manager. The applica
 
 ### GitLab
 
-The GitLab adapter uses the configured API v4 base URL and a `Private-Token` header. It validates required identifiers and response shapes, paginates changes and discussions, applies request timeouts, and performs bounded retries for eligible transient failures. It maps authentication, permission, rate-limit, timeout, and server failures to user-facing messages without forwarding response bodies.
+The GitLab adapter uses the configured API v4 base URL and a `Private-Token` header. It validates the endpoint before attaching the token, rejects obvious local/private destinations unless `ALLOW_PRIVATE_API_URLS=true` is explicitly set, disables redirects, validates response shapes, paginates changes and discussions, bounds response and diff sizes, applies request timeouts, and performs bounded retries for eligible transient failures. It maps authentication, permission, rate-limit, timeout, and server failures to user-facing messages without forwarding response bodies.
 
 The token still grants whatever access its GitLab role and scope provide. The tool cannot reduce an over-privileged token after it is issued. Prefer a project or group access token with the lowest role and API scope that can perform the required read and comment operations.
 
@@ -64,7 +64,7 @@ The security profiles use a constrained output contract. A finding must provide:
 
 WordPress findings additionally require code-path evidence. A function or hook name is not enough. The minimum plausible attacker role is included only when the diff supports it; otherwise the parser uses `insufficient evidence`.
 
-Malformed JSON, missing required fields, evidence not present in the diff, unsupported file paths, and disallowed attack-oriented content are suppressed rather than posted. This is a safety boundary, not proof that a suppressed response was harmless or that an omitted issue does not exist.
+Malformed JSON, missing required fields, evidence not present in the diff, unsupported file paths, and output matching known attack-oriented patterns are suppressed rather than posted. This is defense in depth rather than a complete semantic safety boundary; it is not proof that a suppressed response was harmless or that an omitted issue does not exist.
 
 ## What the model is not allowed to do
 

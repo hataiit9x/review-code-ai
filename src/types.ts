@@ -47,6 +47,7 @@ export interface IGitLabConfig {
     timeoutMs?: number;
     maxRetries?: number;
     retryBaseDelayMs?: number;
+    allowPrivateApiUrls?: boolean;
 }
 
 export type DiffChangeKind = 'text' | 'deleted' | 'renamed' | 'binary' | 'truncated' | 'unavailable';

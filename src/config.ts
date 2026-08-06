@@ -1,4 +1,5 @@
 import { DEFAULT_OPENAI_MODEL } from './openai-config';
+import { parseAllowPrivateApiUrls } from './api-url';
 
 export const DEFAULT_GITLAB_API_URL = 'https://gitlab.com/api/v4';
 export const DEFAULT_OPENAI_API_URL = 'https://api.openai.com/v1';
@@ -12,6 +13,7 @@ export interface ResolvedReviewConfig {
     reviewProfile: string;
     providerApiUrl: string;
     providerAccessToken: string;
+    allowPrivateApiUrls?: boolean;
     organizationId?: string;
     customModel: string;
 }
@@ -63,6 +65,7 @@ export const resolveReviewConfig = (
         reviewProfile: firstNonEmpty(readOption(options, 'reviewProfile')) ?? 'standard',
         providerApiUrl,
         providerAccessToken,
+        allowPrivateApiUrls: parseAllowPrivateApiUrls(environment.ALLOW_PRIVATE_API_URLS),
         ...(firstNonEmpty(
             environment.OPENAI_ORGANIZATION_ID,
             readOption(options, 'organizationId'),

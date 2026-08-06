@@ -6,6 +6,8 @@ import {
     GitLabIntegrationError,
     GITLAB_PAGE_SIZE,
     MAX_DIFF_CHARS,
+    MAX_GITLAB_RESPONSE_BYTES,
+    MAX_TOTAL_DIFF_CHARS,
 } from '../src/gitlab';
 import type { IDiffChange } from '../src/types';
 
@@ -86,6 +88,15 @@ const createGitLabMock = (
 };
 
 describe('GitLab merge request integration', () => {
+    it('rejects private endpoints before attaching the GitLab token', () => {
+        expect(() => new GitLab({
+            gitlabApiUrl: 'http://127.0.0.1:8080/api/v4',
+            gitlabAccessToken: 'synthetic-gitlab-token',
+            projectId: '42',
+            mergeRequestId: '7',
+        })).toThrow('local or private host');
+    });
+
     it('uses self-hosted base URLs and follows paginated diffs', async () => {
         const largeDiff = 'x'.repeat(MAX_DIFF_CHARS + 25);
         const { create, gitlab, requests } = createGitLabMock([
@@ -120,6 +131,9 @@ describe('GitLab merge request integration', () => {
             expect(create).toHaveBeenCalledWith(expect.objectContaining({
                 baseURL: 'https://gitlab.example.test/gitlab/api/v4',
                 timeout: 1_500,
+                maxContentLength: MAX_GITLAB_RESPONSE_BYTES,
+                maxBodyLength: MAX_GITLAB_RESPONSE_BYTES,
+                maxRedirects: 0,
             }));
             expect(changes).toHaveLength(5);
             expect(changes[4]?.diffTruncated).toBe(true);
@@ -133,6 +147,22 @@ describe('GitLab merge request integration', () => {
             expect(diffRequests).toHaveLength(2);
             expect(diffRequests[0]?.config).toEqual({ params: { page: 1, per_page: GITLAB_PAGE_SIZE } });
             expect(diffRequests[1]?.config).toEqual({ params: { page: 2, per_page: GITLAB_PAGE_SIZE } });
+        } finally {
+            create.mockRestore();
+        }
+    });
+
+    it('rejects aggregate diff content beyond the safe review limit', async () => {
+        const oversizedChanges = Array.from({ length: 101 }, () => textChange({
+            diff: 'x'.repeat(MAX_DIFF_CHARS),
+        }));
+        const { create, gitlab } = createGitLabMock([response(oversizedChanges)]);
+
+        try {
+            await expect(gitlab.getMergeRequestChanges()).rejects.toThrow(
+                'GitLab merge request diff content exceeds the safe review size limit.',
+            );
+            expect(MAX_TOTAL_DIFF_CHARS).toBeLessThan(oversizedChanges.length * MAX_DIFF_CHARS);
         } finally {
             create.mockRestore();
         }

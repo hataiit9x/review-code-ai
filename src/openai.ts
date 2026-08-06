@@ -4,6 +4,7 @@ import OpenAISdk, {
     APIError,
     type ClientOptions,
 } from 'openai';
+import { validateApiBaseUrl } from './api-url';
 import { IAIClient, ReviewRequest, ReviewResult } from './types';
 import { DEFAULT_OPENAI_MODEL, OPENAI_MAX_RETRIES, OPENAI_REQUEST_TIMEOUT_MS } from './openai-config';
 import { getReviewPrompts } from './prompts';
@@ -17,6 +18,8 @@ export interface OpenAIProviderOptions {
     maxRetries?: number;
     /** Inject a mocked HTTP implementation for unit tests. */
     fetch?: ClientOptions['fetch'];
+    /** Permit explicitly trusted private/self-hosted endpoints. */
+    allowPrivateApiUrls?: boolean;
 }
 
 export class OpenAIProviderError extends Error {
@@ -44,6 +47,17 @@ export class OpenAI implements IAIClient {
             throw new OpenAIProviderError('OpenAI API URL is required.');
         }
 
+        let baseURL: string;
+        try {
+            baseURL = validateApiBaseUrl(
+                apiUrl,
+                'OpenAI API',
+                { allowPrivateHosts: options.allowPrivateApiUrls === true },
+            );
+        } catch (error: unknown) {
+            throw new OpenAIProviderError(error instanceof Error ? error.message : 'OpenAI API URL is invalid.');
+        }
+
         const accessTokens = accessToken
             ?.split(',')
             .map((token) => token.trim())
@@ -59,19 +73,29 @@ export class OpenAI implements IAIClient {
         }
 
         const maxRetries = this.normalizeRetryCount(options.maxRetries);
+        const fetchImplementation = options.fetch ?? globalThis.fetch;
         this.accessTokens = accessTokens;
         this.model = customModel?.trim() || DEFAULT_OPENAI_MODEL;
         this.timeoutMs = timeoutMs;
 
         const clientOptions: ClientOptions = {
             apiKey: async () => this.getNextAccessToken(),
-            baseURL: apiUrl,
+            baseURL,
             timeout: timeoutMs,
             // The SDK applies bounded exponential backoff and honors Retry-After headers.
             maxRetries,
             ...(orgId?.trim() ? { organization: orgId.trim() } : {}),
             ...(options.projectId?.trim() ? { project: options.projectId.trim() } : {}),
-            ...(options.fetch ? { fetch: options.fetch } : {}),
+            fetch: async (input, init) => {
+                if (!fetchImplementation) {
+                    throw new OpenAIProviderError('OpenAI HTTP fetch is unavailable in this runtime.');
+                }
+
+                return fetchImplementation(input, {
+                    ...(init ?? {}),
+                    redirect: 'error',
+                });
+            },
         };
 
         this.apiClient = new OpenAISdk(clientOptions);

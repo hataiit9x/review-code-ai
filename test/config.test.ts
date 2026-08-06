@@ -42,6 +42,7 @@ describe('credential configuration', () => {
             providerAccessToken: 'env-openai-secret',
             customModel: 'env-model',
             organizationId: 'env-org',
+            allowPrivateApiUrls: false,
         });
     });
 
@@ -104,6 +105,13 @@ describe('credential configuration', () => {
         expect(config.providerApiUrl).toBe('https://cli.openai.example/v1');
         expect(config.customModel).toBe('cli-model');
         expect(config.providerAccessToken).toBe('');
+    });
+
+    it('requires an explicit environment opt-in for private API endpoints', () => {
+        expect(resolveReviewConfig({}, {}).allowPrivateApiUrls).toBe(false);
+        expect(resolveReviewConfig({}, { ALLOW_PRIVATE_API_URLS: 'true' }).allowPrivateApiUrls).toBe(true);
+        expect(resolveReviewConfig({}, { ALLOW_PRIVATE_API_URLS: '1' }).allowPrivateApiUrls).toBe(true);
+        expect(resolveReviewConfig({}, { ALLOW_PRIVATE_API_URLS: 'on' }).allowPrivateApiUrls).toBe(false);
     });
 
     it('warns when deprecated secret flags are used without echoing their values', () => {

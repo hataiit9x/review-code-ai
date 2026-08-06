@@ -4,6 +4,7 @@ import { OpenAI, type OpenAIProviderOptions } from '../src/openai';
 type RequestSnapshot = {
     body: Record<string, unknown>;
     headers: Headers;
+    redirect: RequestInit['redirect'];
     url: string;
 };
 
@@ -25,7 +26,7 @@ const createFetchMock = (
         const body = typeof init?.body === 'string' ? JSON.parse(init.body) as Record<string, unknown> : {};
         const headers = new Headers(init?.headers);
         const url = input instanceof Request ? input.url : String(input);
-        requests.push({ body, headers, url });
+        requests.push({ body, headers, redirect: init?.redirect, url });
 
         const response = responses.shift();
         if (!response) {
@@ -63,12 +64,13 @@ describe('OpenAI provider', () => {
         expect(requests).toHaveLength(1);
         const request = requests[0]!;
         expect(request.url).toBe('https://compatible.example/v1/responses');
+        expect(request.redirect).toBe('error');
         expect(request.headers.get('authorization')).toBe('Bearer synthetic-openai-key');
         expect(request.headers.get('openai-organization')).toBe('organization-1');
         expect(request.headers.get('openai-project')).toBe('project-1');
         expect(request.body).toMatchObject({
             model: 'configured-model',
-            input: 'diff content',
+            input: expect.stringContaining('diff content'),
             stream: false,
         });
     });

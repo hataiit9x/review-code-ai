@@ -30,6 +30,7 @@ This project is intentionally a small diff-review assistant. The following limit
 
 - `security` and `wordpress-security` are opt-in defensive profiles. `standard` remains the default.
 - Security findings are emitted only when the response is valid and contains direct evidence from the supplied diff. This can suppress useful leads when the diff is incomplete, the model cites an equivalent but differently formatted excerpt, or the response is malformed.
+- API endpoints are operator configuration. Obvious local/private hosts are rejected by default, but DNS, reverse proxies, network policy, and any explicit `ALLOW_PRIVATE_API_URLS=true` deployment choice remain outside the CLI's complete control.
 - Evidence validation checks whether text is present in the diff; it does not prove that the code is reachable, exploitable, or semantically unsafe.
 - The security profiles do not run exploit attempts, interact with live systems, or establish a full attack path outside the changed code.
 - Prompt-injection resistance is implemented through trusted instructions, untrusted-data framing, and output filtering. It reduces a known class of model manipulation but cannot guarantee that a provider will ignore every adversarial string.
