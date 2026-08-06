@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { DEFAULT_GITLAB_API_URL, DEFAULT_OPENAI_API_URL } from './config';
 import { DEFAULT_OPENAI_MODEL } from './openai-config';
 import { ReviewProfile } from './types';
 
@@ -23,10 +24,10 @@ export const parseReviewProfile = (value: unknown): ReviewProfile => {
  */
 export const createCliProgram = (): Command => {
     return new Command()
-        .option('-g, --gitlab-api-url <string>', 'GitLab API URL', 'https://gitlab.com/api/v4')
-        .option('-t, --gitlab-access-token <string>', 'GitLab Access Token')
-        .option('-o, --openai-api-url <string>', 'OpenAI API URL', 'https://api.openai.com/v1')
-        .option('-a, --openai-access-token <string>', 'OpenAI Access Token')
+        .option('-g, --gitlab-api-url <string>', 'GitLab API URL', DEFAULT_GITLAB_API_URL)
+        .option('-t, --gitlab-access-token <string>', 'GitLab Access Token (deprecated; prefer environment variables)')
+        .option('-o, --openai-api-url <string>', 'OpenAI API URL', DEFAULT_OPENAI_API_URL)
+        .option('-a, --openai-access-token <string>', 'OpenAI Access Token (deprecated; prefer environment variables)')
         .option('-p, --project-id <number>', 'GitLab Project ID')
         .option('-m, --merge-request-id <string>', 'GitLab Merge Request ID')
         .option('-org, --organization-id <number>', 'Organization ID')

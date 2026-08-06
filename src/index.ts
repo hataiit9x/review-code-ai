@@ -1,5 +1,6 @@
 import { classifyDiffChange, GitLab } from './gitlab';
 import { createCliProgram, parseReviewProfile } from './cli';
+import { getSafeErrorMessage, resolveReviewConfig, warnAboutLegacySecretFlags } from './config';
 import { createAIProvider } from './provider-factory';
 import { formatSecurityFindings, parseSecurityReview } from './security-review';
 import { IAIProvider, IDiffChange, ReviewProfile, ReviewRequest } from './types';
@@ -20,10 +21,11 @@ async function processChange(
     aiClient: IAIProvider,
     gitlab: GitLab,
     reviewProfile: ReviewProfile,
+    secrets: readonly string[],
 ): Promise<void> {
     const changeKind = classifyDiffChange(change);
     if (changeKind !== 'text') {
-        await processSummaryChange(change, aiClient, gitlab, reviewProfile, changeKind);
+        await processSummaryChange(change, aiClient, gitlab, reviewProfile, changeKind, secrets);
         return;
     }
 
@@ -63,13 +65,13 @@ async function processChange(
                 await delay(RATE_LIMIT_DELAY);
                 diffBlocks.push(block);
             } else {
-                console.error('Error processing diff block:', error instanceof Error ? error.message : error);
+                console.error('Error processing diff block:', getSafeErrorMessage(error, secrets));
             }
         }
     }
 
     if (!reviewAttempted) {
-        await processSummaryChange(change, aiClient, gitlab, reviewProfile, 'unavailable');
+        await processSummaryChange(change, aiClient, gitlab, reviewProfile, 'unavailable', secrets);
     }
 }
 
@@ -79,6 +81,7 @@ async function processSummaryChange(
     gitlab: GitLab,
     reviewProfile: ReviewProfile,
     changeKind: ReturnType<typeof classifyDiffChange>,
+    secrets: readonly string[],
 ): Promise<void> {
     const path = (change.new_path || change.old_path || 'this change').replace(/[\r\n]/g, ' ');
     let suggestion: string;
@@ -105,7 +108,7 @@ async function processSummaryChange(
                 console.log('Rate limit exceeded, retrying in 60s...');
                 await delay(RATE_LIMIT_DELAY);
             } else {
-                console.error('Error processing change summary:', error instanceof Error ? error.message : error);
+                console.error('Error processing change summary:', getSafeErrorMessage(error, secrets));
             }
             return;
         }
@@ -119,7 +122,7 @@ async function processSummaryChange(
                 console.log('Rate limit exceeded while posting summary, retrying in 60s...');
                 await delay(RATE_LIMIT_DELAY);
             } else {
-                console.error('Error posting change summary:', error instanceof Error ? error.message : error);
+                console.error('Error posting change summary:', getSafeErrorMessage(error, secrets));
             }
         }
     }
@@ -144,27 +147,30 @@ function isRateLimitError(error: unknown): boolean {
 
 async function run(): Promise<void> {
     const opts = program.opts();
-    const reviewProfile = parseReviewProfile(opts.reviewProfile);
+    warnAboutLegacySecretFlags(process.argv);
+    const config = resolveReviewConfig(opts);
+    const reviewProfile = parseReviewProfile(config.reviewProfile);
+    const secrets = [config.gitlabAccessToken, ...config.providerAccessToken.split(',')];
     
     const gitlab = new GitLab({
-        gitlabApiUrl: opts.gitlabApiUrl,
-        gitlabAccessToken: opts.gitlabAccessToken,
-        projectId: opts.projectId,
-        mergeRequestId: opts.mergeRequestId,
+        gitlabApiUrl: config.gitlabApiUrl,
+        gitlabAccessToken: config.gitlabAccessToken,
+        projectId: config.projectId,
+        mergeRequestId: config.mergeRequestId,
     });
 
     const aiClient = createAIProvider(
-        opts.mode,
-        opts.openaiApiUrl,
-        opts.openaiAccessToken,
-        opts.organizationId,
-        opts.customModel
+        config.mode,
+        config.providerApiUrl,
+        config.providerAccessToken,
+        config.organizationId,
+        config.customModel
     );
 
     try {
         await gitlab.init();
     } catch (error) {
-        console.error('Failed to initialize GitLab client:', error instanceof Error ? error.message : error);
+        console.error('Failed to initialize GitLab client:', getSafeErrorMessage(error, secrets));
         process.exit(1);
     }
 
@@ -172,13 +178,13 @@ async function run(): Promise<void> {
     try {
         changes = await gitlab.getMergeRequestChanges();
     } catch (error) {
-        console.error('Failed to get merge request changes:', error instanceof Error ? error.message : error);
+        console.error('Failed to get merge request changes:', getSafeErrorMessage(error, secrets));
         process.exit(1);
     }
 
     for (const change of changes) {
         if (shouldSkipChange(change)) continue;
-        await processChange(change, aiClient, gitlab, reviewProfile);
+        await processChange(change, aiClient, gitlab, reviewProfile, secrets);
     }
 
     console.log('Done');
