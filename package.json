@@ -34,19 +34,24 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "description": "![](preview.png)",
+  "description": "AI-assisted GitLab merge request reviewer with evidence-based security and WordPress security profiles",
   "bugs": {
     "url": "https://github.com/hataiit9x/review-code-ai/issues"
   },
   "homepage": "https://github.com/hataiit9x/review-code-ai#readme",
   "keywords": [
-    "AI",
-    "Gemini",
-    "OpenAI",
-    "Code",
-    "Reviewer",
-    "Gitlab CI",
-    "Gitlab"
+    "code-review",
+    "gitlab",
+    "gitlab-ci",
+    "security",
+    "application-security",
+    "wordpress",
+    "wordpress-security",
+    "typescript",
+    "openai",
+    "gemini",
+    "cli",
+    "devsecops"
   ],
   "author": "Tai.Ha",
   "devDependencies": {

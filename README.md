@@ -1,5 +1,8 @@
 # review-code-ai
-
+[![CI](https://github.com/hataiit9x/review-code-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/hataiit9x/review-code-ai/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/@hataiit9x/review-code-ai.svg)](https://www.npmjs.com/package/@hataiit9x/review-code-ai)
+[![npm downloads](https://img.shields.io/npm/dm/@hataiit9x/review-code-ai.svg)](https://www.npmjs.com/package/@hataiit9x/review-code-ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 `review-code-ai` is a TypeScript CLI that reviews GitLab merge-request diffs with a configured OpenAI-compatible or Gemini model provider. It retrieves the merge request changes, sends reviewable diff content to the selected provider, and posts the resulting review as GitLab discussions when a valid position is available.
 
 This is AI-assisted code review, not a compiler, static analyzer, penetration-testing tool, or guarantee of vulnerability detection.
@@ -7,6 +10,34 @@ This is AI-assisted code review, not a compiler, static analyzer, penetration-te
 ## Purpose
 
 The project is intended for teams that want a small, scriptable review assistant in a GitLab workflow. The default `standard` profile provides general code-review feedback. The opt-in `security` and `wordpress-security` profiles apply stricter evidence requirements and are designed for defensive assistance.
+
+## Example security finding
+
+```text
+Title: Missing capability check in admin action
+Severity: High
+Confidence: High
+CWE: CWE-862
+
+Location:
+includes/admin-settings.php:84
+
+Evidence:
+The authenticated admin-post callback updates plugin settings without
+checking current_user_can(...).
+
+Impact:
+A lower-privileged authenticated user may be able to modify security-sensitive
+plugin configuration if they can invoke this handler.
+
+Remediation:
+Add an appropriate capability check before processing the request and reject
+unauthorized users.
+
+Suggested regression test:
+Verify that an administrator can update the setting and that subscriber and
+author roles receive an authorization failure.
+```
 
 ## Architecture overview
 
