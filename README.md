@@ -7,6 +7,33 @@
 
 This is AI-assisted code review, not a compiler, static analyzer, penetration-testing tool, or guarantee of vulnerability detection.
 
+## Quickstart
+
+```bash
+git clone https://github.com/hataiit9x/review-code-ai
+cd review-code-ai
+npm ci && npm run build
+
+export GITLAB_ACCESS_TOKEN="<gitlab-token>"
+export OPENAI_API_KEY="<provider-key>"   # or GEMINI_API_KEY with --mode gemini
+
+node bin/index.js --project-id <project-id> --merge-request-id <mr-iid>
+```
+
+Prefer the published npm package? See [Installation](#installation) below for `npm install --global @hataiit9x/review-code-ai`.
+
+## Built with Factory Droid
+
+This repository is modernized and maintained with [Droid](https://factory.ai), the AI software engineering agent from Factory. Droid drove the modernization work, including:
+
+- Migration to TypeScript strict mode with dedicated `typecheck`, `lint`, and `test` commands.
+- A common provider interface with separate OpenAI-compatible and Gemini implementations.
+- Evidence-based `security` and `wordpress-security` review profiles.
+- GitLab pagination, bounded retries, duplicate prevention, and summary fallback.
+- A Vitest suite that runs without access to a real GitLab instance or model provider.
+
+[`AGENTS.md`](AGENTS.md) at the repository root holds the coding rules Droid follows when working here. If you use Droid, open this repository in it and ask for a change; the agent reads those rules and the codebase before editing. [`FACTORY.md`](FACTORY.md) documents the concrete Droid workflow used for repository analysis, implementation, security review, regression testing, and documentation maintenance. CI (GitHub Actions) runs build, lint, and tests on every pull request.
+
 ## Purpose
 
 The project is intended for teams that want a small, scriptable review assistant in a GitLab workflow. The default `standard` profile provides general code-review feedback. The opt-in `security` and `wordpress-security` profiles apply stricter evidence requirements and are designed for defensive assistance.

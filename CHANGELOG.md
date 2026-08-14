@@ -30,3 +30,6 @@ All notable user-visible changes are recorded here. The current modernization wo
 
 - Added architecture, security model, limitations, contributing, and vulnerability-reporting guidance.
 - Added migration notes from the previous flag-based CLI configuration.
+- Added a README quickstart and a section describing how the repository is maintained with Factory Droid.
+- Added `FACTORY.md` documenting the Droid workflow for analysis, implementation, security review, regression testing, and documentation.
+- Expanded `AGENTS.md` with commands, architecture boundaries, security requirements, and completion criteria.
